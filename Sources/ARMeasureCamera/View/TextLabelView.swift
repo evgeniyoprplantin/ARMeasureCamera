@@ -22,7 +22,7 @@ public struct TextLabelView: View {
     
     @ObservedObject var model: TextLabelViewViewModel
 
-    var body: some View {
+    public var body: some View {
         Text(model.text)
             .foregroundColor(.green)
             .padding(.horizontal, 6)

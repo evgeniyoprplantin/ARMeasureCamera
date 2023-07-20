@@ -26,7 +26,7 @@ let package = Package(
             dependencies: [],
             resources: [
                 .process("Media.xcassets"),
-                .copy("Resources/Focus_1.scn"),
+                .copy("Resources/Focus.scn"),
                 .copy("Resources/target.png")
             ]
         ),

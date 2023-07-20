@@ -26,7 +26,7 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     
     //MARK: - Life cycle
     
-    override func viewDidLoad() {
+    public override func viewDidLoad() {
         super.viewDidLoad()
         initScene()
         initARSession()
@@ -35,13 +35,13 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         initTextNode()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         
     }
     
-    override func viewWillDisappear(_ animated: Bool) {
+    public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         sceneView.session.pause()
     }
@@ -242,20 +242,20 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
 
 extension ARMeasureViewController {
 
-    func session(_ session: ARSession, cameraDidChangeTrackingState camera: ARCamera) {}
+    public func session(_ session: ARSession, cameraDidChangeTrackingState camera: ARCamera) {}
 
-    func session(_ session: ARSession, didFailWithError error: Error) {}
+    public func session(_ session: ARSession, didFailWithError error: Error) {}
 
-    func sessionWasInterrupted(_ session: ARSession) {}
+    public func sessionWasInterrupted(_ session: ARSession) {}
 
-    func sessionInterruptionEnded(_ session: ARSession) {}
+    public func sessionInterruptionEnded(_ session: ARSession) {}
 }
 
 // MARK: - Render Management
 
 extension ARMeasureViewController {
     
-    func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+    public func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
         DispatchQueue.main.async {
             
             // focus node
@@ -304,11 +304,11 @@ extension ARMeasureViewController {
         }
     }
     
-    func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {}
+    public func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {}
 
-    func renderer(_ renderer: SCNSceneRenderer, didRemove node: SCNNode, for anchor: ARAnchor) {}
+    public func renderer(_ renderer: SCNSceneRenderer, didRemove node: SCNNode, for anchor: ARAnchor) {}
 
-    func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {}
+    public func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {}
 }
 
 // MARK: - Scene Management

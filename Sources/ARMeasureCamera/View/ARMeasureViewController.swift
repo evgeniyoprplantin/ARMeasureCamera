@@ -356,9 +356,10 @@ extension ARMeasureViewController {
 extension ARMeasureViewController {
     
     func initFocusNode() {
-        let focusScene = SCNScene(named: "art.scnassets/Focus.scn")!
-        focusNode = focusScene.rootNode.childNode(withName: "Focus", recursively: false)
-        sceneView.scene.rootNode.addChildNode(focusNode)
+        if let focusScene = SCNScene(named: "art.scnassets/Focus.scn") {
+            focusNode = focusScene.rootNode.childNode(withName: "Focus", recursively: false)
+            sceneView.scene.rootNode.addChildNode(focusNode)
+        }
     }
 
     func initFocusNodeTracker() {

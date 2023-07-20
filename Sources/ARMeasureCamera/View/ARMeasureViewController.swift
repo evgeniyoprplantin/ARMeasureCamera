@@ -10,7 +10,7 @@ import SceneKit
 import ARKit
 import SwiftUI
 
-final class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
+final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
 
     @IBOutlet var sceneView: ARSCNView!
     

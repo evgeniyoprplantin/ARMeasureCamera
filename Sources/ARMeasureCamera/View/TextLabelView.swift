@@ -9,10 +9,9 @@ import SwiftUI
 
 public class TextLabelViewViewModel: ObservableObject {
     
-    @Published var text: String = "13"
+    @Published var text: String = ""
     
     func updateText(_ text: String) {
-        print("-->> \(text)")
         self.text = text
     }
 }

@@ -27,7 +27,7 @@ let package = Package(
         .target(
             name: "ARMeasureCamera",
             dependencies: [],
-            resources: [.process("Media.xcassets"), .copy("Focus.scn")]
+            resources: [.process("Media.xcassets"), .copy("Focus_1.scn.scn")]
         ),
         .testTarget(
             name: "ARMeasureCameraTests",

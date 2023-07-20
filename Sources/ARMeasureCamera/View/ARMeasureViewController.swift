@@ -12,7 +12,7 @@ import SwiftUI
 
 final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
 
-    @IBOutlet var sceneView: ARSCNView!
+    var sceneView: ARSCNView!
     
     var startNode: SCNNode?
     var endNode: SCNNode?
@@ -28,6 +28,11 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     
     public override func viewDidLoad() {
         super.viewDidLoad()
+        
+        sceneView = ARSCNView()
+        sceneView.frame = view.frame
+        view.addSubview(sceneView)
+        
         initScene()
         initARSession()
         initFocusNode()

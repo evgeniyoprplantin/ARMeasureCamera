@@ -28,7 +28,7 @@ let package = Package(
             name: "ARMeasureCamera",
             dependencies: [],
             path: "Sources",
-            resources: [.process("Sources/ARMeasureCamera/art.scnassets")]
+            resources: [.process("Resources/art.scnassets"), .copy("Resources")]
         ),
         .testTarget(
             name: "ARMeasureCameraTests",

@@ -356,6 +356,7 @@ extension ARMeasureViewController {
 extension ARMeasureViewController {
     
     func initFocusNode() {
+        let image = UIImage(named: "test", in: .module, with: nil)
         if let url = Bundle.module.url(forResource: "Focus", withExtension: "scn", subdirectory: "art.scnassets") {
             // Use the URL to load your SCN file
             // ...

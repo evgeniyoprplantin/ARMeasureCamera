@@ -282,21 +282,7 @@ extension ARMeasureViewController {
                let camera = self.sceneView.session.currentFrame?.camera {
                 self.textNode?.opacity = 1
                 
-                
-                //                    self.textNode?.eulerAngles.x = camera.eulerAngles.x //line_node.eulerAngles.x
-                //                    self.textNode?.eulerAngles.y = line_node.eulerAngles.y
-                //                    self.textNode?.eulerAngles.z = line_node.eulerAngles.z
-                //                    self.textNode?.eulerAngles.x = camera.eulerAngles.x + .pi / 2
-                //                    self.textNode?.eulerAngles.y = camera.eulerAngles.y
-                //                    self.textNode?.eulerAngles.z = line_node.eulerAngles.z
-                
-                //self.textNode?.eulerAngles = line_node.eulerAngles
-                //                    self.textNode?.eulerAngles.x = line_node.eulerAngles.x //+ .pi / 2
-                //                    self.textNode?.eulerAngles.y = line_node.eulerAngles.y
-                //                self.textNode?.eulerAngles = line_node.eulerAngles
-                self.textNode?.eulerAngles.x = camera.eulerAngles.x //+ .pi / 2
                 self.textNode?.eulerAngles.y = camera.eulerAngles.y
-                
                 
                 self.textNode?.position.x = endPosition.x + 0.05
                 self.textNode?.position.y = endPosition.y
@@ -356,18 +342,14 @@ extension ARMeasureViewController {
 extension ARMeasureViewController {
     
     func initFocusNode() {
-        if let url = Bundle.module.url(forResource: "Focus_1", withExtension: "scn") {
+        if let url = Bundle.module.url(forResource: "Focus", withExtension: "scn") {
             do {
                 let focusScene = try SCNScene(url: url)
                 focusNode = focusScene.rootNode.childNode(withName: "Focus", recursively: false)
                 sceneView.scene.rootNode.addChildNode(focusNode)
             } catch {
-                print("error")
+                print("Error loading Focus scene: \(error)")
             }
-        }
-        if let focusScene = SCNScene(named: "art.scnassets/Focus.scn") {
-            focusNode = focusScene.rootNode.childNode(withName: "Focus", recursively: false)
-            sceneView.scene.rootNode.addChildNode(focusNode)
         }
     }
 

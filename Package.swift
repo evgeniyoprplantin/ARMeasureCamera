@@ -26,7 +26,10 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "ARMeasureCamera",
-            dependencies: []),
+            dependencies: [],
+            resources: [
+                .process("art.scnassets")
+                        ]),
         .testTarget(
             name: "ARMeasureCameraTests",
             dependencies: ["ARMeasureCamera"]),

@@ -5,45 +5,59 @@
 //  Created by Evgeniy Opryshko on 20.07.2023.
 //
 
-import UIKit
 import SceneKit
 import ARKit
 import SwiftUI
+import Combine
 
 final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
 
-    var sceneView: ARSCNView!
+    private var sceneView: ARSCNView!
     
-    var startNode: SCNNode?
-    var endNode: SCNNode?
-    var line_node: SCNNode?
-    var textNode: SCNNode?
-
-    var focusNode: SCNNode!
-    var focusNodeTracker: ARNodeTracker = ARNodeTracker()
+    private var startNode: SCNNode?
+    private var endNode: SCNNode?
+    private var line_node: SCNNode?
+    private var textNode: SCNNode?
+    private var focusNode: SCNNode!
+    private var focusNodeTracker: ARNodeTracker = ARNodeTracker()
+    private var cancellables = Set<AnyCancellable>()
     
-    let model = TextLabelViewViewModel()
+    private var indicatorView: UIView?
+    private var manager: ARMeasureCameraManager!
+    
     
     //MARK: - Life cycle
     
     public override func viewDidLoad() {
         super.viewDidLoad()
         
-        sceneView = ARSCNView()
-        sceneView.frame = view.frame
-        view.addSubview(sceneView)
-        
         initScene()
         initARSession()
         initFocusNode()
         initFocusNodeTracker()
-        initTextNode()
+        initIndicatorNode()
+        
+        //
+        manager.publisher
+            .sink { [weak self] action in
+                switch action {
+                case .point:
+                    self?.addPoint()
+                case .reset:
+                    self?.reset()
+                }
+            }
+            .store(in: &cancellables)
+        
+        setState(.initial)
     }
     
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        sceneView.frame = view.frame
         
+        setState(.ready)
     }
     
     public override func viewWillDisappear(_ animated: Bool) {
@@ -51,11 +65,19 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         sceneView.session.pause()
     }
     
+    //MARK: - Configure
+    
+    public func configureWith(manager: ARMeasureCameraManager, indicatorView: UIView? = nil) {
+        self.manager = manager
+        self.indicatorView = indicatorView
+    }
+    
     //MARK: - Actions
     
-    @IBAction func addPointAction(_ sender: Any) {
+    public func addPoint() {
         guard endNode == nil else {
             reset()
+            setState(.ready)
             return
         }
         
@@ -66,15 +88,17 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
             if startNode == nil {
                 // set start node
                 startNode = node
+                setState(.measuring)
             } else {
                 endNode = node
+                setState(.measurementCompleted)
             }
             
             sceneView.scene.rootNode.addChildNode(node)
         }
     }
     
-    func reset() {
+    public func reset() {
         startNode?.removeFromParentNode()
         startNode = nil
         
@@ -85,6 +109,8 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         line_node = nil
         
         textNode?.opacity = 0
+        
+        setState(.ready)
     }
     
     func doHitTestOnExistingPlanes() -> SCNVector3? {
@@ -122,16 +148,21 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         return node
     }
  
-    func createTextNod() -> SCNNode {
+    func createIndicatorNode() -> SCNNode {
         let plane = SCNPlane(width: 10, height: 10)
-        let arVC = UIHostingController(rootView: TextLabelView(model: model)).view
+        var arMarkView: UIView?
+        if let indicatorView {
+            arMarkView = indicatorView
+        } else {
+            arMarkView = UIHostingController(rootView: IndicatorView(manager: manager)).view
+        }
         
         let material = SCNMaterial()
         material.isDoubleSided = true
-        arVC?.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
-        arVC?.isOpaque = false
-        arVC?.backgroundColor = UIColor.clear
-        material.diffuse.contents = arVC
+        arMarkView?.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+        arMarkView?.isOpaque = false
+        arMarkView?.backgroundColor = UIColor.clear
+        material.diffuse.contents = arMarkView
         
         plane.materials = [material]
         let node = SCNNode(geometry: plane)
@@ -140,7 +171,6 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     }
     
     func cylinderLine(from: SCNVector3, to: SCNVector3) -> SCNNode {
-
         let x1 = from.x
         let x2 = to.x
 
@@ -217,15 +247,7 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         let s = String(format: "%.1f %@", v, unit)
         return s
     }
-    
-    /**
-     feet from meter
-     */
-    func foot_fromMeter(m: Float) -> Float {
-        let v = m * 3.28084
-        return v
-    }
-    
+        
     /**
      Inch from meter
      */
@@ -240,6 +262,14 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     func CM_fromMeter(m: Float) -> Float {
         let v = m * 100.0
         return v
+    }
+    
+    //MARK: - Private methods
+    
+    private func setState(_ state: ARMeasureCameraManager.ARMeasureState) {
+        DispatchQueue.main.async {
+            self.manager.state = state
+        }
     }
 }
 
@@ -288,7 +318,7 @@ extension ARMeasureViewController {
                 self.textNode?.position.y = endPosition.y
                 self.textNode?.position.z = endPosition.z
                 
-                self.model.updateText(desc)
+                self.manager.updateMarkText(desc)
             } else {
                 self.textNode?.opacity = 0
             }
@@ -305,7 +335,11 @@ extension ARMeasureViewController {
 // MARK: - Scene Management
 
 extension ARMeasureViewController {
+    
     func initScene() {
+        sceneView = ARSCNView()
+        view.addSubview(sceneView)
+        
         let scene = SCNScene()
         sceneView.scene = scene
         sceneView.delegate = self
@@ -315,7 +349,7 @@ extension ARMeasureViewController {
     
     func initARSession() {
         guard ARWorldTrackingConfiguration.isSupported else {
-            print("AR World Tracking not supported")
+            setState(.error)
             return
         }
 
@@ -359,9 +393,12 @@ extension ARMeasureViewController {
         focusNodeTracker.trackingNode = sceneView.pointOfView!
     }
     
-    func initTextNode() {
-        textNode = createTextNod()
+    func initIndicatorNode() {
+        textNode = createIndicatorNode()
         textNode?.position = SCNVector3(x: 0, y: 0, z: 0)
-        sceneView.scene.rootNode.addChildNode(self.textNode!)
+        textNode?.opacity = 0
+        if let textNode {
+            sceneView.scene.rootNode.addChildNode(textNode)
+        }
     }
 }

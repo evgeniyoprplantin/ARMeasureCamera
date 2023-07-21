@@ -37,19 +37,7 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         initFocusNodeTracker()
         initIndicatorNode()
         
-        //
-        manager.publisher
-            .sink { [weak self] action in
-                switch action {
-                case .point:
-                    self?.addPoint()
-                case .reset:
-                    self?.reset()
-                }
-            }
-            .store(in: &cancellables)
-        
-        setState(.initial)
+        subscriptions()
     }
     
     public override func viewWillAppear(_ animated: Bool) {
@@ -96,6 +84,21 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
             
             sceneView.scene.rootNode.addChildNode(node)
         }
+    }
+    
+    func subscriptions() {
+        manager.publisher
+            .sink { [weak self] action in
+                switch action {
+                case .point:
+                    self?.addPoint()
+                case .reset:
+                    self?.reset()
+                }
+            }
+            .store(in: &cancellables)
+        
+        setState(.initial)
     }
     
     public func reset() {
@@ -320,7 +323,7 @@ extension ARMeasureViewController {
                 
                 self.manager.updateMarkText(desc)
             } else {
-                self.textNode?.opacity = 0
+                self.textNode?.opacity = 0.001
             }
         }
     }
@@ -396,7 +399,7 @@ extension ARMeasureViewController {
     func initIndicatorNode() {
         textNode = createIndicatorNode()
         textNode?.position = SCNVector3(x: 0, y: 0, z: 0)
-        textNode?.opacity = 0
+        textNode?.opacity = 0.001
         if let textNode {
             sceneView.scene.rootNode.addChildNode(textNode)
         }

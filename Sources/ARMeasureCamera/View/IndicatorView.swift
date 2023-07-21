@@ -11,9 +11,9 @@ public struct IndicatorView: View {
     
     @ObservedObject var manager: ARMeasureCameraManager
     
-    public init(manager: ARMeasureCameraManager) {
-        self.manager = manager
-    }
+//    public init(manager: ARMeasureCameraManager) {
+//        self._manager = StateObject(wrappedValue: manager)
+//    }
 
     public var body: some View {
         Text(manager.measureText)

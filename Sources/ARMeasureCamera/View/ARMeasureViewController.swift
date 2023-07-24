@@ -21,10 +21,11 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     private var focusNode: SCNNode!
     private var focusNodeTracker: ARNodeTracker = ARNodeTracker()
     private var cancellables = Set<AnyCancellable>()
-    
-    private var indicatorView: UIView?
     private var manager: ARMeasureCameraManager!
     
+    // Settings
+    var indicatorView: UIView?
+    var planeDetection: ARWorldTrackingConfiguration.PlaneDetection = [.horizontal]
     
     //MARK: - Life cycle
     
@@ -154,7 +155,7 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     func createIndicatorNode() -> SCNNode {
         let plane = SCNPlane(width: 10, height: 10)
         
-        let arMarkView = UIHostingController(rootView: IndicatorView(manager: manager)).view
+        let arMarkView = indicatorView ?? UIHostingController(rootView: IndicatorView(manager: manager)).view
         arMarkView?.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
         arMarkView?.isOpaque = false
         arMarkView?.backgroundColor = UIColor.clear
@@ -318,7 +319,7 @@ extension ARMeasureViewController {
 
         config.worldAlignment = .gravity
         config.providesAudioData = false
-        config.planeDetection = [.horizontal]
+        config.planeDetection = planeDetection
         config.isLightEstimationEnabled = true
         config.environmentTexturing = .automatic
 
@@ -327,7 +328,7 @@ extension ARMeasureViewController {
 
     func resetARSession() {
         let config = sceneView.session.configuration as! ARWorldTrackingConfiguration
-        config.planeDetection = [.horizontal]
+        config.planeDetection = planeDetection
         sceneView.session.run(config, options: [.resetTracking, .removeExistingAnchors])
     }
 }

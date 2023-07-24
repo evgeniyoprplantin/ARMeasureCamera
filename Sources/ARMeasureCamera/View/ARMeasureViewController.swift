@@ -24,8 +24,8 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     private var manager: ARMeasureCameraManager!
     
     // Settings
-    var indicatorView: UIView?
-    var planeDetection: ARWorldTrackingConfiguration.PlaneDetection = [.horizontal]
+    public var indicatorView: UIView?
+    public var planeDetection: ARWorldTrackingConfiguration.PlaneDetection = [.horizontal]
     
     //MARK: - Life cycle
     

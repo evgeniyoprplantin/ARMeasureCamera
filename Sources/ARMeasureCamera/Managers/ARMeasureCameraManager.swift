@@ -10,19 +10,18 @@ import Combine
 
 public class ARMeasureCameraManager: ObservableObject {
     
-    public enum ARMeasureAction {
-        case point, reset
-    }
-    
-    public enum ARMeasureState: Equatable {
-        case initial, ready, measuring, measurementCompleted, error
-    }
-    
     @Published public var state: ARMeasureState = .initial
-    @Published var measureText: String = ""
+    @Published public var unitSystem: UnitSystem = .metric
+    @Published public var measureText: String = ""
+    public var measure: Float?
+    
     public let publisher = PassthroughSubject<ARMeasureAction, Never>()
     
-    public init() { }
+    //MARK: - Init
+    
+    public init(unitSystem: ARMeasureCameraManager.UnitSystem = .metric) {
+        self.unitSystem = unitSystem
+    }
     
     public func addPoint() {
         publisher.send(.point)
@@ -32,7 +31,44 @@ public class ARMeasureCameraManager: ObservableObject {
         publisher.send(.reset)
     }
     
-    public func updateMarkText(_ text: String) {
-        self.measureText = text
+    public func updateMarkText(with distance: CGFloat) {
+        let cm = self.CM_fromMeter(m: Float(distance))
+        measure = cm
+        
+        switch unitSystem {
+        case .imperial:
+            let inch = Inch_fromMeter(m: Float(distance))
+            self.measureText = stringValue(v: Float(inch), unit: "in")
+        case .metric:
+            self.measureText = stringValue(v: Float(cm), unit: "cm")
+        }
+    }
+    
+    public func changeUnitSystem(to unitSystem: ARMeasureCameraManager.UnitSystem) {
+        self.unitSystem = unitSystem
+    }
+    
+    /**
+     String with float value and unit
+     */
+    func stringValue(v: Float, unit: String) -> String {
+        let s = String(format: "%.1f %@", v, unit)
+        return s
+    }
+        
+    /**
+     Inch from meter
+     */
+    func Inch_fromMeter(m: Float) -> Float {
+        let v = m * 39.3701
+        return v
+    }
+    
+    /**
+     centimeter from meter
+     */
+    func CM_fromMeter(m: Float) -> Float {
+        let v = m * 100.0
+        return v
     }
 }

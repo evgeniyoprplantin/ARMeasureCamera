@@ -38,6 +38,8 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         initIndicatorNode()
         
         subscriptions()
+        
+        setState(.initial)
     }
     
     public override func viewWillAppear(_ animated: Bool) {
@@ -97,8 +99,6 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
                 }
             }
             .store(in: &cancellables)
-        
-        setState(.initial)
     }
     
     public func reset() {
@@ -153,23 +153,21 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
  
     func createIndicatorNode() -> SCNNode {
         let plane = SCNPlane(width: 10, height: 10)
-        var arMarkView: UIView?
-        if let indicatorView {
-            arMarkView = indicatorView
-        } else {
-            arMarkView = UIHostingController(rootView: IndicatorView(manager: manager)).view
-        }
         
-        let material = SCNMaterial()
-        material.isDoubleSided = true
+        let arMarkView = UIHostingController(rootView: IndicatorView(manager: manager)).view
         arMarkView?.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
         arMarkView?.isOpaque = false
         arMarkView?.backgroundColor = UIColor.clear
+        
+        let material = SCNMaterial()
+        material.isDoubleSided = true
         material.diffuse.contents = arMarkView
         
         plane.materials = [material]
+        
         let node = SCNNode(geometry: plane)
         node.scale = SCNVector3(x: 0.01, y: 0.01, z: 0.01)
+        node.pivot = SCNMatrix4MakeTranslation(-1, -1, 0)
         return node
     }
     
@@ -205,30 +203,13 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     /**
      Distance string
      */
-    func getDistanceStringBetween(pos1: SCNVector3?, pos2: SCNVector3?) -> String? {
+    func getDistanceStringBetween(pos1: SCNVector3?, pos2: SCNVector3?) -> CGFloat? {
         guard let pos1 = pos1, let pos2 = pos2 else { return nil }
         
         let distance = distanceBetweenPoints(A: pos1, B: pos2)
-        guard distance > 0.1 else { return nil }
+        guard distance > 0.01 else { return nil }
         
-        
-//        let meter = stringValue(v: Float(d), unit: "meters")
-//        result.append(meter)
-//        result.append("\n")
-//
-//        let f = self.foot_fromMeter(m: Float(d))
-//        let feet = stringValue(v: Float(f), unit: "feet")
-//        result.append(feet)
-//        result.append("\n")
-//
-//        let inch = self.Inch_fromMeter(m: Float(d))
-//        let inches = stringValue(v: Float(inch), unit: "inch")
-//        result.append(inches)
-//        result.append("\n")
-        
-        let cm = self.CM_fromMeter(m: Float(distance))
-        print(stringValue(v: Float(cm), unit: "cm"))
-        return stringValue(v: Float(cm), unit: "cm")
+        return distance
     }
     
     /**
@@ -241,30 +222,6 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
                 +   (A.z - B.z) * (A.z - B.z)
         )
         return CGFloat(l)
-    }
-    
-    /**
-     String with float value and unit
-     */
-    func stringValue(v: Float, unit: String) -> String {
-        let s = String(format: "%.1f %@", v, unit)
-        return s
-    }
-        
-    /**
-     Inch from meter
-     */
-    func Inch_fromMeter(m: Float) -> Float {
-        let v = m * 39.3701
-        return v
-    }
-    
-    /**
-     centimeter from meter
-     */
-    func CM_fromMeter(m: Float) -> Float {
-        let v = m * 100.0
-        return v
     }
     
     //MARK: - Private methods
@@ -311,19 +268,20 @@ extension ARMeasureViewController {
             self.line_node = self.cylinderLine(from: endPosition, to: start.position)
             self.sceneView.scene.rootNode.addChildNode(self.line_node!)
             
-            if let desc = self.getDistanceStringBetween(pos1: endPosition, pos2: start.position),
+            if let distance = self.getDistanceStringBetween(pos1: endPosition, pos2: start.position),
                let camera = self.sceneView.session.currentFrame?.camera {
                 self.textNode?.opacity = 1
-                
-                self.textNode?.eulerAngles.y = camera.eulerAngles.y
                 
                 self.textNode?.position.x = endPosition.x + 0.05
                 self.textNode?.position.y = endPosition.y
                 self.textNode?.position.z = endPosition.z
                 
-                self.manager.updateMarkText(desc)
+                self.textNode?.eulerAngles.x = camera.eulerAngles.x
+                self.textNode?.eulerAngles.y = camera.eulerAngles.y
+                
+                self.manager.updateMarkText(with: distance)
             } else {
-                self.textNode?.opacity = 0.001
+                self.textNode?.opacity = 0
             }
         }
     }
@@ -400,8 +358,6 @@ extension ARMeasureViewController {
         textNode = createIndicatorNode()
         textNode?.position = SCNVector3(x: 0, y: 0, z: 0)
         textNode?.opacity = 0.001
-        if let textNode {
-            sceneView.scene.rootNode.addChildNode(textNode)
-        }
+        sceneView.scene.rootNode.addChildNode(self.textNode!)
     }
 }

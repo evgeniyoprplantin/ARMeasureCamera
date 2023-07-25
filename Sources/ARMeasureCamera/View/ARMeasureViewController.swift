@@ -12,7 +12,7 @@ import Combine
 
 final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate {
 
-    private var sceneView: ARSCNView!
+    private(set) var sceneView: ARSCNView!
     
     private var startNode: SCNNode?
     private var endNode: SCNNode?
@@ -22,7 +22,8 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     private var focusNodeTracker: ARNodeTracker = ARNodeTracker()
     private var cancellables = Set<AnyCancellable>()
     private var manager: ARMeasureCameraManager!
-    
+    let coachingOverlay = ARCoachingOverlayView()
+        
     // Settings
     public var indicatorView: UIView?
     public var planeDetection: ARWorldTrackingConfiguration.PlaneDetection = [.horizontal]
@@ -35,8 +36,9 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         initScene()
         initARSession()
         initFocusNode()
-        initFocusNodeTracker()
-        initIndicatorNode()
+        
+        // Set up coaching overlay.
+        setupCoachingOverlay()
         
         subscriptions()
         
@@ -47,6 +49,9 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         super.viewWillAppear(animated)
         
         sceneView.frame = view.frame
+        
+        initFocusNodeTracker()
+        initIndicatorNode()
         
         setState(.ready)
     }
@@ -252,15 +257,18 @@ extension ARMeasureViewController {
 extension ARMeasureViewController {
     
     public func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+
+        guard !coachingOverlay.isActive else { return }
+        
         DispatchQueue.main.async {
-            
             // focus node
             self.focusNodeTracker.updateAt(time: time)
             
+            // check if start-node is available
+            guard let start = self.startNode else { return }
+            
             // get current hit position
-            // and check if start-node is available
-            guard let start = self.startNode,
-                  let currentPosition = self.doHitTestOnExistingPlanes() else { return }
+            guard let currentPosition = self.doHitTestOnExistingPlanes() else { return }
             
             let endPosition = self.endNode?.position ?? currentPosition
             
@@ -352,7 +360,7 @@ extension ARMeasureViewController {
     func initFocusNodeTracker() {
         focusNodeTracker.sceneView = sceneView
         focusNodeTracker.trackedNode = focusNode
-        focusNodeTracker.trackingNode = sceneView.pointOfView!
+        focusNodeTracker.trackingNode = sceneView.pointOfView
     }
     
     func initIndicatorNode() {

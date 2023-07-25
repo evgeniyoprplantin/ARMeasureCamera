@@ -31,6 +31,10 @@ public class ARMeasureCameraManager: ObservableObject {
         publisher.send(.reset)
     }
     
+    public func updateMarkText(with text: String) {
+        measureText = text
+    }
+    
     public func updateMarkText(with distance: CGFloat) {
         let cm = self.CM_fromMeter(m: Float(distance))
         measure = cm

@@ -10,6 +10,9 @@ import SceneKit
 import ARKit
 
 class ARNodeTracker: NSObject {
+    
+    var lastUpdateTime: TimeInterval = 0.0
+    let interval: TimeInterval = 0.02
     weak var sceneView: ARSCNView?
 
     weak var trackedNode: SCNNode? {
@@ -62,9 +65,14 @@ class ARNodeTracker: NSObject {
     }
 
     func updateAt(time: TimeInterval) {
+        guard time - lastUpdateTime >= interval else { return }
+        
+        lastUpdateTime = time
         update(with: trackingNode)
-        trackedNodePositionTracker.updateAt(time: time)
-        trackingNodeAngleTracker.updateAt(time: time)
+        
+        //TODO EO: Update
+//        trackedNodePositionTracker.updateAt(time: time)
+//        trackingNodeAngleTracker.updateAt(time: time)
     }
 }
 

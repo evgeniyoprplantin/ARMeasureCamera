@@ -35,16 +35,16 @@ public class ARMeasureCameraManager: ObservableObject {
         measureText = text
     }
     
-    public func updateMarkText(with distance: CGFloat) {
+    public func updateMarkText(with distance: CGFloat) -> String {
         let cm = self.CM_fromMeter(m: Float(distance))
         measure = cm
         
         switch unitSystem {
         case .imperial:
             let inch = Inch_fromMeter(m: Float(distance))
-            self.measureText = stringValue(v: Float(inch), unit: "in")
+            return stringValue(v: Float(inch), unit: "in")
         case .metric:
-            self.measureText = stringValue(v: Float(cm), unit: "cm")
+            return stringValue(v: Float(cm), unit: "cm")
         }
     }
     

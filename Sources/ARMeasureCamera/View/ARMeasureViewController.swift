@@ -24,8 +24,12 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     private var manager: ARMeasureCameraManager!
     let coachingOverlay = ARCoachingOverlayView()
         
+    /// A serial queue used to coordinate adding or removing nodes from the scene.
+    let updateQueue = DispatchQueue(label: "com.ARMeasureViewCamera.serialSceneKitQueue")
+    
     // Settings
-    public var indicatorView: UIView?
+    public var indicatorForegroundColor: UIColor?
+    public var indicatorFont: UIFont?
     public var planeDetection: ARWorldTrackingConfiguration.PlaneDetection = [.horizontal]
     
     //MARK: - Life cycle
@@ -51,7 +55,7 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         sceneView.frame = view.frame
         
         initFocusNodeTracker()
-        initIndicatorNode()
+        initIndicatorNode(with: " ")
         
         setState(.ready)
     }
@@ -63,9 +67,10 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
     
     //MARK: - Configure
     
-    public func configureWith(manager: ARMeasureCameraManager, indicatorView: UIView? = nil) {
+    public func configureWith(manager: ARMeasureCameraManager, indicatorForegroundColor: UIColor? = .green, indicatorFont: UIFont? = UIFont.systemFont(ofSize: 1)) {
         self.manager = manager
-        self.indicatorView = indicatorView
+        self.indicatorForegroundColor = indicatorForegroundColor
+        self.indicatorFont = indicatorFont
     }
     
     //MARK: - Actions
@@ -80,17 +85,18 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         if let position = self.doHitTestOnExistingPlanes() {
             // add node at hit-position
             let node = self.nodeWithPosition(position)
-            
-            if startNode == nil {
-                // set start node
-                startNode = node
-                setState(.measuring)
-            } else {
-                endNode = node
-                setState(.measurementCompleted)
+            updateQueue.async {
+                if self.startNode == nil {
+                    // set start node
+                    self.startNode = node
+                    self.setState(.measuring)
+                } else {
+                    self.endNode = node
+                    self.setState(.measurementCompleted)
+                }
+                
+                self.sceneView.scene.rootNode.addChildNode(node)
             }
-            
-            sceneView.scene.rootNode.addChildNode(node)
         }
     }
     
@@ -157,24 +163,64 @@ final public class ARMeasureViewController: UIViewController, ARSCNViewDelegate 
         return node
     }
  
-    func createIndicatorNode() -> SCNNode {
-        let plane = SCNPlane(width: 10, height: 10)
+    //TODO EO: figure out what's going on ?
+//    func createIndicatorNodeFromUIView() -> SCNNode {
+//        let plane = SCNPlane(width: 10, height: 10)
+//
+//        let arMarkView = indicatorView ?? UIHostingController(rootView: IndicatorView(manager: manager)).view
+//        arMarkView?.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+//        arMarkView?.isOpaque = false
+//        arMarkView?.backgroundColor = UIColor.clear
+//
+//        let material = SCNMaterial()
+//        material.isDoubleSided = true
+//        material.diffuse.contents = arMarkView
+//
+//        plane.materials = [material]
+//
+//        let node = SCNNode(geometry: plane)
+//        node.scale = SCNVector3(x: 0.01, y: 0.01, z: 0.01)
+//        node.pivot = SCNMatrix4MakeTranslation(-1, -1, 0)
+//        return node
+//    }
+    
+    func createIndicatorNode(with text: String) -> SCNNode {
+        let text = SCNText(string: text, extrusionDepth: 0.1)
+        text.font = indicatorFont
+        text.flatness = 0.005
+        let textNode = SCNNode(geometry: text)
+        let fontScale: Float = 0.01
+        textNode.scale = SCNVector3(fontScale, fontScale, fontScale)
+        textNode.geometry?.firstMaterial?.diffuse.contents = indicatorForegroundColor
         
-        let arMarkView = indicatorView ?? UIHostingController(rootView: IndicatorView(manager: manager)).view
-        arMarkView?.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
-        arMarkView?.isOpaque = false
-        arMarkView?.backgroundColor = UIColor.clear
+        // Get the bounding box of the text
+        let (min, max) = (text.boundingBox.min, text.boundingBox.max)
+        let dx = min.x + 0.5 * (max.x - min.x)
+        let dy = min.y + 0.5 * (max.y - min.y)
+        let dz = min.z + 0.5 * (max.z - min.z)
+        textNode.pivot = SCNMatrix4MakeTranslation(dx, dy, dz)
         
-        let material = SCNMaterial()
-        material.isDoubleSided = true
-        material.diffuse.contents = arMarkView
+        let width = (max.x - min.x) * fontScale
+        let height = (max.y - min.y) * fontScale
         
-        plane.materials = [material]
+        // Add padding around the text
+        let paddingX: Float = 0.005
+        let paddingY: Float = 0.0025
+        let paddedWidth = width + paddingX * 2
+        let paddedHeight = height + paddingY * 2
         
-        let node = SCNNode(geometry: plane)
-        node.scale = SCNVector3(x: 0.01, y: 0.01, z: 0.01)
-        node.pivot = SCNMatrix4MakeTranslation(-1, -1, 0)
-        return node
+        // Create a rounded corner plane with the padded dimensions
+        let plane = SCNPlane(width: CGFloat(paddedWidth), height: CGFloat(paddedHeight))
+        plane.cornerRadius = CGFloat(paddedHeight * 0.5) // Set the corner radius to half of the height for rounded corners
+        
+        let planeNode = SCNNode(geometry: plane)
+        planeNode.geometry?.firstMaterial?.diffuse.contents = UIColor.white
+        planeNode.geometry?.firstMaterial?.isDoubleSided = true
+        planeNode.position = textNode.position
+        textNode.eulerAngles = planeNode.eulerAngles
+        planeNode.addChildNode(textNode)
+        
+        return planeNode
     }
     
     func cylinderLine(from: SCNVector3, to: SCNVector3) -> SCNNode {
@@ -262,7 +308,9 @@ extension ARMeasureViewController {
         
         DispatchQueue.main.async {
             // focus node
-            self.focusNodeTracker.updateAt(time: time)
+            self.updateQueue.async {
+                self.focusNodeTracker.updateAt(time: time)
+            }
             
             // check if start-node is available
             guard let start = self.startNode else { return }
@@ -279,16 +327,21 @@ extension ARMeasureViewController {
             
             if let distance = self.getDistanceStringBetween(pos1: endPosition, pos2: start.position),
                let camera = self.sceneView.session.currentFrame?.camera {
+                self.textNode?.removeFromParentNode()
+                
+                let text = self.manager.updateMarkText(with: distance)
+                self.textNode = self.createIndicatorNode(with: text)
+                
                 self.textNode?.opacity = 1
                 
-                self.textNode?.position.x = endPosition.x + 0.05
-                self.textNode?.position.y = endPosition.y
+                self.textNode?.position.x = endPosition.x + 0.015
+                self.textNode?.position.y = endPosition.y + 0.015
                 self.textNode?.position.z = endPosition.z
                 
                 self.textNode?.eulerAngles.x = camera.eulerAngles.x
                 self.textNode?.eulerAngles.y = camera.eulerAngles.y
                 
-                self.manager.updateMarkText(with: distance)
+                self.sceneView.scene.rootNode.addChildNode(self.textNode!)
             } else {
                 self.textNode?.opacity = 0
             }
@@ -350,7 +403,10 @@ extension ARMeasureViewController {
             do {
                 let focusScene = try SCNScene(url: url)
                 focusNode = focusScene.rootNode.childNode(withName: "Focus", recursively: false)
-                sceneView.scene.rootNode.addChildNode(focusNode)
+                
+                updateQueue.async {
+                    self.sceneView.scene.rootNode.addChildNode(self.focusNode)
+                }
             } catch {
                 print("Error loading Focus scene: \(error)")
             }
@@ -363,10 +419,13 @@ extension ARMeasureViewController {
         focusNodeTracker.trackingNode = sceneView.pointOfView
     }
     
-    func initIndicatorNode() {
-        textNode = createIndicatorNode()
-        textNode?.position = SCNVector3(x: 0, y: 0, z: 0)
-        textNode?.opacity = 0.001
-        sceneView.scene.rootNode.addChildNode(self.textNode!)
+    func initIndicatorNode(with text: String) {
+        updateQueue.async {
+            self.textNode = self.createIndicatorNode(with: text)
+            self.textNode?.position = SCNVector3(x: 0, y: 0, z: 0)
+            self.textNode?.opacity = 0.001
+        
+            self.sceneView.scene.rootNode.addChildNode(self.textNode!)
+        }
     }
 }
